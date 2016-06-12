@@ -18,7 +18,7 @@ type Conn interface {
 	Exec(query *Query)
 	Close()
 	Conn() *Client
-	ExecQuery(command string, args ...string)
+	ExecQuery(command string, args ...string) interface{}
 }
 
 // Client is Redis conn.
@@ -115,16 +115,14 @@ func (c *Client) Exec(query *Query) {
 	if err != nil {
 		panic(err)
 	}
-	println(string(buf[:n]))
-	println("Total:", n, "bytes received.")
-	println("------")
 	query.ret = string(buf[:n])
 }
 
 // ExecQuery is a directly function
-func (c *Client) ExecQuery(command string, args ...string) {
+func (c *Client) ExecQuery(command string, args ...string) interface{} {
 	q := buildCommand(command, args...)
 	c.Exec(q)
+	return q.ret
 }
 
 // Info is a method that return info of redis server.
