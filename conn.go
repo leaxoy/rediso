@@ -11,7 +11,7 @@ import (
 type Conn interface {
 	SelectDB(db int) *DB
 	Ping() string
-	Auth(auth string)
+	Auth(auth string) bool
 	Info() string
 	HostInfo() string
 	DB() int
@@ -78,7 +78,10 @@ func (c *Client) SelectDB(db int) *DB {
 }
 
 // Auth is a function to auth to redis server.
-func (c *Client) Auth(auth string) {
+func (c *Client) Auth(auth string) bool {
+	q := buildCommand("Auth", auth)
+	c.Exec(q)
+	return q.ret.(string) == "+OK\n"
 }
 
 // Ping is a function that ping to redis server.
@@ -145,7 +148,6 @@ func (c *Client) Conn() *Client {
 
 // NewRedis create new redis conn
 func NewRedis(config *Config) *Client {
-	connection := new(Client)
 	host := "localhost"
 	port := 6379
 	db := 0
@@ -170,9 +172,11 @@ func NewRedis(config *Config) *Client {
 	if err != nil {
 		panic(err)
 	}
-	connection.conn = conn
-	connection.SelectDB(db)
-	return connection
+	client := new(Client)
+
+	client.conn = conn
+	client.SelectDB(db)
+	return client
 }
 
 // DB is redis db.
