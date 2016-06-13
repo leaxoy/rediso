@@ -13,8 +13,8 @@ type Conn interface {
 	Auth(auth string) bool
 	Conn() *Client
 	DB() int
-	Exec(query *Query)
-	ExecQuery(command string, args ...string) interface{}
+	ExecQuery(query *Query)
+	Exec(command string, args ...string) interface{}
 	SelectDB(db int) *DB
 	Info() string
 	HostInfo() string
@@ -75,7 +75,7 @@ func (c *Client) SelectDB(db int) *DB {
 		connection: c,
 		query:      new(Query)}
 	q := buildCommand("SELECT", strconv.Itoa(db))
-	c.Exec(q)
+	c.ExecQuery(q)
 	c.db = database
 	return database
 }
@@ -83,14 +83,14 @@ func (c *Client) SelectDB(db int) *DB {
 // Auth is a function to auth to redis server.
 func (c *Client) Auth(auth string) bool {
 	q := buildCommand("Auth", auth)
-	c.Exec(q)
+	c.ExecQuery(q)
 	return q.ret.(string) == "+OK\n"
 }
 
 // Ping is a function that ping to redis server.
 func (c *Client) Ping() string {
 	q := buildCommand("PING")
-	c.Exec(q)
+	c.ExecQuery(q)
 	return q.ret.(string)
 }
 
@@ -109,8 +109,8 @@ func buildCommand(command string, args ...string) *Query {
 	return q
 }
 
-// Exec is a function to exec command on redis conn
-func (c *Client) Exec(query *Query) {
+// ExecQuery is a function to exec command on redis conn
+func (c *Client) ExecQuery(query *Query) {
 	// n, err := bufio.NewWriter(c.conn).WriteString(query.query)
 	_, err := c.conn.Write([]byte(query.query))
 	if err != nil {
@@ -124,17 +124,17 @@ func (c *Client) Exec(query *Query) {
 	query.ret = string(buf[:n])
 }
 
-// ExecQuery is a directly function
-func (c *Client) ExecQuery(command string, args ...string) interface{} {
+// Exec is a directly function
+func (c *Client) Exec(command string, args ...string) interface{} {
 	q := buildCommand(command, args...)
-	c.Exec(q)
+	c.ExecQuery(q)
 	return q.ret
 }
 
 // Info is a method that return info of redis server.
 func (c *Client) Info() string {
 	q := buildCommand("INFO")
-	c.Exec(q)
+	c.ExecQuery(q)
 	return q.ret.(string)
 }
 
