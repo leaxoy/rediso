@@ -2,6 +2,7 @@ package rediso
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -9,22 +10,23 @@ import (
 
 // Conn is interface
 type Conn interface {
-	SelectDB(db int) *DB
-	Ping() string
 	Auth(auth string) bool
-	Info() string
-	HostInfo() string
+	Conn() *Client
 	DB() int
 	Exec(query *Query)
-	Close()
-	Conn() *Client
 	ExecQuery(command string, args ...string) interface{}
+	SelectDB(db int) *DB
+	Info() string
+	HostInfo() string
+	Ping() string
+	Close()
 }
 
 // Client is Redis conn.
 type Client struct {
 	db   *DB
 	conn net.Conn
+	conf *Config
 }
 
 // Query is struct.
@@ -53,6 +55,7 @@ type Config struct {
 	ssl     bool          // use ssl. default is false
 	timeout time.Duration // default is 5's
 	db      int           // default is 0
+	auth    string        // default is null
 }
 
 // Connect is a function to connect redis server and return the conn.
@@ -137,8 +140,11 @@ func (c *Client) Info() string {
 
 // HostInfo return the redis server info.
 func (c *Client) HostInfo() string {
-	info := c.Info()
-	return info
+	auth := c.conf.auth
+	if c.conf.auth == "" {
+		auth = "nil"
+	}
+	return fmt.Sprintf("Host:\t%s\nPort:\t%d\nDB:\t%d\nAuth:\t%s", c.conf.host, c.conf.port, c.conf.db, auth)
 }
 
 // Conn return the current client.
@@ -148,34 +154,31 @@ func (c *Client) Conn() *Client {
 
 // NewRedis create new redis conn
 func NewRedis(config *Config) *Client {
-	host := "localhost"
-	port := 6379
-	db := 0
-	var timeout time.Duration
-	timeout = 5
-	if config != nil {
-		if config.host != "" {
-			host = config.host
-		}
-		if config.port > 1024 {
-			port = config.port
-		}
-		if config.db >= 0 && config.db <= 16 {
-			db = config.db
-		}
-		if config.timeout > 0 {
-			timeout = config.timeout
-		}
+	if config == nil {
+		config = new(Config)
+		config.host = "localhost"
+		config.port = 6379
+		config.db = 0
+		config.timeout = 5
+		config.ssl = false
+		config.auth = ""
 	}
-	addr := host + ":" + strconv.Itoa(port)
-	conn, err := net.DialTimeout("tcp", addr, time.Second*timeout)
+	addr := config.host + ":" + strconv.Itoa(config.port)
+	conn, err := net.DialTimeout("tcp", addr, time.Second*config.timeout)
 	if err != nil {
 		panic(err)
 	}
 	client := new(Client)
 
 	client.conn = conn
-	client.SelectDB(db)
+	client.conf = config
+	if config.auth != "" {
+		ok := client.Auth(config.auth)
+		if !ok {
+			panic("Auth failed")
+		}
+	}
+	client.SelectDB(config.db)
 	return client
 }
 
