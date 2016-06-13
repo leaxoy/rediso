@@ -13,7 +13,8 @@ func main() {
 	println(db)
 	conn.SelectDB(1) // change db to 1
 	db = conn.DB()   //should return 1
-	println(db)
+	println(db
+  conn.Close()
 }
 ```
 
